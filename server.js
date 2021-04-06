@@ -20,8 +20,8 @@ app.get('/', (req, res) => {
 // see https://help.heroku.com/P1AVPANS/why-is-my-node-js-app-crashing-with-an-r10-error
 const PORT = process.env.PORT || 3000;
 
-http.listen(3000, () => {
-    console.log('Listening on port *: 3000');
+http.listen(PORT, () => {
+    console.log('Listening on port *: ', PORT);
 });
 
 // TODO Transfer this data to DB 
