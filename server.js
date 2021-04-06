@@ -1,11 +1,24 @@
 let app = require('express')();
+var cors = require('cors')
 let http = require('http').Server(app);
-let io = require('socket.io')(http);
+// CORS is required
+// https://socket.io/docs/v3/handling-cors/
+let io = require('socket.io')(http, {
+	cors: {
+		methods: ["GET", "POST"]
+	}
+});
 var User = require('./User');
+
+app.use(cors());
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html')
 });
+
+// For deployment in Heroku
+// see https://help.heroku.com/P1AVPANS/why-is-my-node-js-app-crashing-with-an-r10-error
+const PORT = process.env.PORT || 3000;
 
 http.listen(3000, () => {
     console.log('Listening on port *: 3000');
@@ -15,7 +28,7 @@ http.listen(3000, () => {
 let users = [];
 
 io.on('connection', (socket) => {
-
+	console.log("New connection established")
 
 	// The event that a user leaves. The user may rejoin with a new socket id.
     socket.on('disconnected', () => {
@@ -31,6 +44,7 @@ io.on('connection', (socket) => {
 	// The event that a user joins. Covered cases: a new user joins, an existing user rejoins, 
 	// a user tries to join with an already present name. 
 	socket.on('connected', (name) => {
+		console.log("User connected: ", name)
 		const existingUserWithSameName = users.find(user => user.name === name);
 		if(existingUserWithSameName){
 			
