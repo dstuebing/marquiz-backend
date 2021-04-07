@@ -1,5 +1,6 @@
 let app = require('express')();
 var cors = require('cors')
+const { MongoClient } = require("mongodb");
 let http = require('http').Server(app);
 // CORS is required
 // https://socket.io/docs/v3/handling-cors/
@@ -10,6 +11,8 @@ let io = require('socket.io')(http, {
 });
 var User = require('./User');
 
+const dbConnectionString = "mongodb+srv://RWUser:8YSSSCTEO4Apnfsm@cluster0.p9g9p.mongodb.net/MarQuiz-DB?retryWrites=true&w=majority"
+
 const buzzer = {
 	BUZZED: "buzzed",
 	LOCKED: "locked",
@@ -17,8 +20,28 @@ const buzzer = {
 }
 app.use(cors());
 
+// TODO Endpoint only for testing, can be removed later
 app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/index.html')
+});
+
+// Endpoint for getting all quiz data.
+app.get('/quizes', async (req, res) => {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const collection = database.collection("quizPacks");
+		const returnData = await collection.find({}).toArray();
+		res.status(200).send({ returnData });
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
 });
 
 // For deployment in Heroku
@@ -26,7 +49,7 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 http.listen(PORT, () => {
-    console.log('Listening on port *: ', PORT);
+	console.log('Listening on port *: ', PORT);
 });
 
 // TODO Transfer this data to DB 
