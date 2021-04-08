@@ -59,19 +59,34 @@ let buzzerState = buzzer.OPEN;
 io.on('connection', (socket) => {
 
 	// The event that a user leaves. The user may rejoin with a new socket id.
-	socket.on('disconnected', () => {
+	socket.on('disconnect', () => {
 		const userBySocketId = users.find(user => user.socketId === socket.id);
-		userBySocketId.connected = false;
+		if (userBySocketId)
+		{
+			// remove from user array
+			users = users.filter(user => user.socketId !== socket.id)
+			
+			console.log("User disconnected: ", userBySocketId.name)
+			
+			userBySocketId.connected = false;
 
-		// emitting the same event to everyone
-		const nameOfDisconnectedUser = userBySocketId.name;
-		io.emit('disconnected', nameOfDisconnectedUser);
+			// emitting the same event to everyone
+			const nameOfDisconnectedUser = userBySocketId.name;
+			io.emit('disconnected', nameOfDisconnectedUser);
+		}
 	});
 
 
 	// The event that a user joins. Covered cases: a new user joins, an existing user rejoins, 
 	// a user tries to join with an already present name. 
 	socket.on('connected', (name) => {
+
+		// Replay connected and pointsChanged events for each already connected user to sender only
+		users.forEach((user) => {
+			socket.emit("connected", user.name);
+			socket.emit("pointsChanged", user.points)
+		})
+
 		console.log("User connected: ", name)
 		const existingUserWithSameName = users.find(user => user.name === name);
 		if (existingUserWithSameName) {
