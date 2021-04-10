@@ -1,5 +1,6 @@
 let app = require('express')();
 var cors = require('cors')
+var bodyParser = require('body-parser');
 const { MongoClient, ObjectID } = require("mongodb");
 let http = require('http').Server(app);
 // CORS is required
@@ -19,6 +20,10 @@ const buzzer = {
 	OPEN: "open",
 }
 app.use(cors());
+app.use(bodyParser.json());       // to support JSON-encoded bodies
+app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+	extended: true
+}));
 
 // TODO Endpoint only for testing, can be removed later
 app.get('/', (req, res) => {
@@ -64,6 +69,81 @@ app.delete('/questions/:id', async (req, res) => {
 		await client.close();
 	}
 });
+
+// Adds the new question and also puts the reference into the given category.
+// The id of the newly added question is returned.
+app.post('/questions', async (req, res) => {
+	const text = req.body.text;
+	const audio = req.body.audio;
+	const image = req.body.image;
+	const categoryId = req.body.category;
+
+	// we need to know to which category the new question should be added
+	if (!categoryId) {
+		res.sendStatus(400);
+		return;
+	}
+
+	// we will not add empty questions
+	if (!text && !audio && !image) {
+		res.sendStatus(400);
+		return;
+	}
+
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		// check if the category exists
+		const categoriesCollection = database.collection("categories");
+		const category = await categoriesCollection.findOne({ "_id": ObjectID(categoryId) });
+
+		if (!category) {
+			res.sendStatus(400);
+			return;
+		}
+
+		// add the question
+		const questionsCollection = database.collection("questions");
+		const newDocument = buildQuestionDocument(text, audio, image);
+		const dbResult = await questionsCollection.insertOne(newDocument);
+		const insertedId = dbResult.insertedId;
+
+		if (!insertedId) {
+			res.sendStatus(400);
+			return;
+		}
+
+		// add the new question to the array in the category
+		await categoriesCollection.updateOne(
+			{ _id: ObjectID(categoryId) },
+			{ $push: { questions: { $each: [insertedId.toString()] } } }
+		);
+
+		res.status(200).send({ insertedId });
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
+});
+
+function buildQuestionDocument(text, audio, image) {
+	const document = {};
+	if (text) {
+		document["text"] = text;
+	}
+	if (audio) {
+		document["audio"] = audio;
+	}
+	if (image) {
+		document["image"] = image;
+	}
+	return document;
+}
 
 // For deployment in Heroku
 // see https://help.heroku.com/P1AVPANS/why-is-my-node-js-app-crashing-with-an-r10-error
