@@ -1,6 +1,6 @@
 let app = require('express')();
 var cors = require('cors')
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectID } = require("mongodb");
 let http = require('http').Server(app);
 // CORS is required
 // https://socket.io/docs/v3/handling-cors/
@@ -44,6 +44,27 @@ app.get('/quizes', async (req, res) => {
 	}
 });
 
+// Deletes the question identified by the given id. So far, does not delete the reference
+// in the category that the question belongs to.
+app.delete('/questions/:id', async (req, res) => {
+	const questionId = req.params.id;
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const questionsCollection = database.collection("questions");
+		await questionsCollection.deleteOne({ "_id": ObjectID(questionId) });
+		res.sendStatus(200);
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
+});
+
 // For deployment in Heroku
 // see https://help.heroku.com/P1AVPANS/why-is-my-node-js-app-crashing-with-an-r10-error
 const PORT = process.env.PORT || 3000;
@@ -61,13 +82,12 @@ io.on('connection', (socket) => {
 	// The event that a user leaves. The user may rejoin with a new socket id.
 	socket.on('disconnect', () => {
 		const userBySocketId = users.find(user => user.socketId === socket.id);
-		if (userBySocketId)
-		{
+		if (userBySocketId) {
 			// remove from user array
 			users = users.filter(user => user.socketId !== socket.id)
-			
+
 			console.log("User disconnected: ", userBySocketId.name)
-			
+
 			userBySocketId.connected = false;
 
 			// emitting the same event to everyone
