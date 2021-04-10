@@ -68,6 +68,25 @@ app.get('/categories/:id', async (req, res) => {
 	}
 });
 
+app.get('/questions/:id', async (req, res) => {
+	const questionsId = req.params.id;
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const questionsCollection = database.collection("questions");
+		const returnData = await questionsCollection.findOne({ "_id": ObjectID(questionsId) });
+		res.status(200).send({ returnData });
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
+});
+
 // Deletes the question identified by the given id. So far, does not delete the reference
 // in the category that the question belongs to.
 app.delete('/questions/:id', async (req, res) => {
