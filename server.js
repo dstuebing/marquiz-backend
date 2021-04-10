@@ -131,6 +131,44 @@ app.post('/questions', async (req, res) => {
 	}
 });
 
+// Adding new pack and returning id. Categories array is initially empty.
+app.post('/packs', async (req, res) => {
+	const packName = req.body.packName;
+
+	if (!packName) {
+		res.sendStatus(400);
+		return;
+	}
+
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const packsCollection = database.collection("packs");
+		const newDocument = {
+			packName: packName,
+			categories: []
+		}
+
+		const dbResult = await packsCollection.insertOne(newDocument);
+		const insertedId = dbResult.insertedId;
+
+		if (!insertedId) {
+			res.sendStatus(400);
+			return;
+		}
+
+		res.status(200).send({ insertedId });
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
+});
+
 function buildQuestionDocument(text, audio, image) {
 	const document = {};
 	if (text) {
