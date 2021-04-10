@@ -131,6 +131,59 @@ app.post('/questions', async (req, res) => {
 	}
 });
 
+app.post('/categories', async (req, res) => {
+	const name = req.body.name;
+	const packId = req.body.pack;
+
+	if (!name || !packId) {
+		res.sendStatus(400);
+		return;
+	}
+
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		// check if the pack exists
+		const packsCollection = database.collection("packs");
+		const pack = await packsCollection.findOne({ "_id": ObjectID(packId) });
+
+		if (!pack) {
+			res.sendStatus(400);
+			return;
+		}
+
+		// add the category
+		const categoriesCollection = database.collection("categories");
+		const newDocument = {
+			categoryName: name,
+			questions: []
+		}
+		const dbResult = await categoriesCollection.insertOne(newDocument);
+		const insertedId = dbResult.insertedId;
+
+		if (!insertedId) {
+			res.sendStatus(400);
+			return;
+		}
+
+		// add the new category to the array in the pack
+		await packsCollection.updateOne(
+			{ _id: ObjectID(packId) },
+			{ $push: { categories: { $each: [insertedId.toString()] } } }
+		);
+
+		res.status(200).send({ insertedId });
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
+});
+
 // Adding new pack and returning id. Categories array is initially empty.
 app.post('/packs', async (req, res) => {
 	const packName = req.body.packName;
