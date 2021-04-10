@@ -30,16 +30,16 @@ app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/index.html')
 });
 
-// Endpoint for getting all quiz data.
-app.get('/quizes', async (req, res) => {
+// Endpoint for getting all packs. Does not return all data anymore because of restructuring in DB.
+app.get('/packs', async (req, res) => {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
 
 	try {
 		await client.connect();
 		const database = client.db("MarQuiz-DB");
 
-		const collection = database.collection("quizPacks");
-		const returnData = await collection.find({}).toArray();
+		const packsCollection = database.collection("packs");
+		const returnData = await packsCollection.find({}).toArray();
 		res.status(200).send({ returnData });
 	} catch (err) {
 		console.log(err);
