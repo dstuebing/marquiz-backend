@@ -30,6 +30,48 @@ app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/index.html')
 });
 
+// Endpoint for getting all quiz data.
+app.get('/quizes', async (req, res) => {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		let coll = database.collection("packs");
+		const packs = await coll.find({}).toArray();
+
+		coll = database.collection("categories");
+		const categories = await coll.find({}).toArray();
+
+		coll = database.collection("questions");
+		const questions = await coll.find({}).toArray();
+
+		packs.forEach(
+			(p, p_idx) => {
+				p.categories.forEach(
+					(c, c_idx) => {
+						const category = categories.find((cf) => cf._id == c);
+						category.questions.forEach((q, q_idx) => {
+							const question = questions.find((qf) => qf._id == q);
+							category.questions[q_idx] = question;
+						});
+						packs[p_idx].categories[c_idx] = category;
+					}
+				)
+			}
+		)
+
+		res.status(200).send({ packs });
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	} finally {
+		await client.close();
+	}
+});
+
+
 // Endpoint for getting all packs. Does not return all data anymore because of restructuring in DB.
 app.get('/packs', async (req, res) => {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
