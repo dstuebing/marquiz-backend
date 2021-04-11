@@ -328,6 +328,20 @@ http.listen(PORT, () => {
 let users = [];
 let buzzerState = buzzer.OPEN;
 
+function sendGameState(socket) {
+	if (buzzerState === buzzer.OPEN)
+	{
+		socket.emit("buzzOpen");
+	}
+	else
+	{
+		socket.emit("buzzLock");
+	}
+	users.forEach((user) => {
+		socket.emit("pointsChanged", user.name, user.points);
+	})
+}
+
 io.on('connection', (socket) => {
 
 	// The event that a user leaves. The user may rejoin with a new socket id.
@@ -347,16 +361,17 @@ io.on('connection', (socket) => {
 		}
 	});
 
+	socket.on('game_state', () => {
+		sendGameState(socket);
+	});
+
 
 	// The event that a user joins. Covered cases: a new user joins, an existing user rejoins, 
 	// a user tries to join with an already present name. 
 	socket.on('connected', (name) => {
 
 		// Replay connected and pointsChanged events for each already connected user to sender only
-		users.forEach((user) => {
-			socket.emit("connected", user.name);
-			socket.emit("pointsChanged", user.points)
-		})
+		sendGameState(socket);
 
 		console.log("User connected: ", name)
 		const existingUserWithSameName = users.find(user => user.name === name);
