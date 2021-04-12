@@ -407,8 +407,11 @@ io.on('connection', (socket) => {
 
 			// emitting the same event to everyone
 			const buzzingUserBySocketId = users.find(user => user.socketId === socket.id);
-			const nameOfBuzzingUser = buzzingUserBySocketId.name;
-			io.emit('buzz', nameOfBuzzingUser);
+			if (buzzingUserBySocketId)
+			{
+				const nameOfBuzzingUser = buzzingUserBySocketId.name;
+				io.emit('buzz', nameOfBuzzingUser);
+			}
 		}
 	});
 
@@ -433,8 +436,11 @@ io.on('connection', (socket) => {
 	// changed and the new amount of points.
 	socket.on('pointsChanged', (name, newPoints) => {
 		const userByName = users.find(user => user.name === name);
-		userByName.points = newPoints;
-		io.emit('pointsChanged', name, newPoints);
+		if (userByName)
+		{
+			userByName.points = newPoints;
+			io.emit('pointsChanged', name, newPoints);
+		}
 	});
 
 });
