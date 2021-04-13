@@ -14,7 +14,8 @@ var User = require('./User');
 
 const {
 	getQuestionById,
-	getGameState
+	getGameState,
+	getConnectedUsers
 } = require('./dbUtils');
 
 const dbConnectionString = "mongodb+srv://RWUser:8YSSSCTEO4Apnfsm@cluster0.p9g9p.mongodb.net/MarQuiz-DB?retryWrites=true&w=majority"
@@ -325,13 +326,11 @@ http.listen(PORT, () => {
 let users = [];
 let buzzerState = buzzer.OPEN;
 
-function sendGameState(socket) {
-	if (buzzerState === buzzer.OPEN) {
-		socket.emit("buzzOpen");
-	}
-	else {
-		socket.emit("buzzLock");
-	}
+async function sendGameState(socket) {
+	const state = await getGameState();
+	socket.emit("game_state", state);
+
+	const users = await getConnectedUsers();
 	users.forEach((user) => {
 		socket.emit("pointsChanged", user.name, user.points);
 	})
@@ -356,17 +355,17 @@ io.on('connection', (socket) => {
 		}
 	});
 
-	socket.on('game_state', () => {
-		sendGameState(socket);
+	socket.on('game_state', async () => {
+		await sendGameState(socket);
 	});
 
 
 	// The event that a user joins. Covered cases: a new user joins, an existing user rejoins, 
 	// a user tries to join with an already present name. 
-	socket.on('connected', (name) => {
+	socket.on('connected', async (name) => {
 
 		// Replay connected and pointsChanged events for each already connected user to sender only
-		sendGameState(socket);
+		await sendGameState(socket);
 
 		console.log("User connected: ", name)
 		const existingUserWithSameName = users.find(user => user.name === name);

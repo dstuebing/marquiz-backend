@@ -39,7 +39,26 @@ async function getGameState() {
 	}
 }
 
+async function getConnectedUsers() {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const usersCollection = database.collection("users");
+		const connectedUsers = await usersCollection.find({ "connected": true }).toArray();
+		return connectedUsers;
+	} catch (err) {
+		console.log(err);
+		return null;
+	} finally {
+		await client.close();
+	}
+}
+
 module.exports = {
 	getQuestionById,
-	getGameState
+	getGameState,
+	getConnectedUsers
 }
