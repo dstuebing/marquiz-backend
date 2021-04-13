@@ -12,6 +12,11 @@ let io = require('socket.io')(http, {
 });
 var User = require('./User');
 
+const {
+	getQuestionById,
+	getGameState
+} = require('./dbUtils');
+
 const dbConnectionString = "mongodb+srv://RWUser:8YSSSCTEO4Apnfsm@cluster0.p9g9p.mongodb.net/MarQuiz-DB?retryWrites=true&w=majority"
 
 const buzzer = {
@@ -452,22 +457,4 @@ io.on('connection', (socket) => {
 	});
 
 });
-
-async function getQuestionById(questionsId) {
-	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
-
-	try {
-		await client.connect();
-		const database = client.db("MarQuiz-DB");
-
-		const questionsCollection = database.collection("questions");
-		const question = await questionsCollection.findOne({ "_id": ObjectID(questionsId) });
-		return question;
-	} catch (err) {
-		console.log(err);
-		return null;
-	} finally {
-		await client.close();
-	}
-}
 
