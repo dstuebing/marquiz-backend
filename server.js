@@ -15,7 +15,8 @@ var User = require('./User');
 const {
 	getQuestionById,
 	getGameState,
-	getConnectedUsers
+	getConnectedUsers,
+	setBuzzerState
 } = require('./dbUtils');
 
 const dbConnectionString = "mongodb+srv://RWUser:8YSSSCTEO4Apnfsm@cluster0.p9g9p.mongodb.net/MarQuiz-DB?retryWrites=true&w=majority"
@@ -411,7 +412,7 @@ io.on('connection', (socket) => {
 
 	// The event that the buzzer is locked. 
 	socket.on('buzzLock', () => {
-		buzzerState = buzzer.LOCKED;
+		setBuzzerState(buzzer.LOCKED);
 		io.emit('buzzLock');
 	});
 
@@ -419,7 +420,7 @@ io.on('connection', (socket) => {
 	// The event that the buzzer is set to open. Can be used to unlock the 
 	// locked buzzer or to reset the buzzer after buzzing.
 	socket.on('buzzOpen', () => {
-		buzzerState = buzzer.OPEN;
+		setBuzzerState(buzzer.OPEN);
 		io.emit('buzzOpen');
 	});
 
