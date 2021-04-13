@@ -112,20 +112,12 @@ app.get('/categories/:id', async (req, res) => {
 
 app.get('/questions/:id', async (req, res) => {
 	const questionsId = req.params.id;
-	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+	const question = await getQuestionById(questionsId);
 
-	try {
-		await client.connect();
-		const database = client.db("MarQuiz-DB");
-
-		const questionsCollection = database.collection("questions");
-		const returnData = await questionsCollection.findOne({ "_id": ObjectID(questionsId) });
-		res.status(200).send({ returnData });
-	} catch (err) {
-		console.log(err);
+	if (question) {
+		res.status(200).send({ question });
+	} else {
 		res.sendStatus(400);
-	} finally {
-		await client.close();
 	}
 });
 
@@ -329,12 +321,10 @@ let users = [];
 let buzzerState = buzzer.OPEN;
 
 function sendGameState(socket) {
-	if (buzzerState === buzzer.OPEN)
-	{
+	if (buzzerState === buzzer.OPEN) {
 		socket.emit("buzzOpen");
 	}
-	else
-	{
+	else {
 		socket.emit("buzzLock");
 	}
 	users.forEach((user) => {
@@ -407,8 +397,7 @@ io.on('connection', (socket) => {
 
 			// emitting the same event to everyone
 			const buzzingUserBySocketId = users.find(user => user.socketId === socket.id);
-			if (buzzingUserBySocketId)
-			{
+			if (buzzingUserBySocketId) {
 				const nameOfBuzzingUser = buzzingUserBySocketId.name;
 				io.emit('buzz', nameOfBuzzingUser);
 			}
@@ -436,11 +425,49 @@ io.on('connection', (socket) => {
 	// changed and the new amount of points.
 	socket.on('pointsChanged', (name, newPoints) => {
 		const userByName = users.find(user => user.name === name);
-		if (userByName)
-		{
+		if (userByName) {
 			userByName.points = newPoints;
 			io.emit('pointsChanged', name, newPoints);
 		}
 	});
 
+	// Events for presenting question to players
+	socket.on('showText', async (questionId) => {
+		const question = await getQuestionById(questionId);
+		if (question && question.text) {
+			io.emit('showText', question.text);
+		}
+	});
+	socket.on('showImage', async (questionId) => {
+		const question = await getQuestionById(questionId);
+		if (question && question.image) {
+			io.emit('showImage', question.image);
+		}
+	});
+	socket.on('playAudio', async (questionId) => {
+		const question = await getQuestionById(questionId);
+		if (question && question.audio) {
+			io.emit('playAudio', question.audio);
+		}
+	});
+
 });
+
+async function getQuestionById(questionsId) {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const questionsCollection = database.collection("questions");
+		const question = await questionsCollection.findOne({ "_id": ObjectID(questionsId) });
+		return question;
+	} catch (err) {
+		console.log(err);
+		return null;
+	} finally {
+		await client.close();
+	}
+}
+
