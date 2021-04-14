@@ -190,7 +190,7 @@ app.post('/questions', async (req, res) => {
 
 		// add the question
 		const questionsCollection = database.collection("questions");
-		const newDocument = buildQuestionDocument(text, audio, image);
+		const newDocument = buildQuestionDocument(text, audio, image, categoryId);
 		const dbResult = await questionsCollection.insertOne(newDocument);
 		const insertedId = dbResult.insertedId;
 
@@ -242,6 +242,7 @@ app.post('/categories', async (req, res) => {
 		const categoriesCollection = database.collection("categories");
 		const newDocument = {
 			categoryName: name,
+			parentPack: packId,
 			questions: []
 		}
 		const dbResult = await categoriesCollection.insertOne(newDocument);
@@ -305,8 +306,10 @@ app.post('/packs', async (req, res) => {
 	}
 });
 
-function buildQuestionDocument(text, audio, image) {
-	const document = {};
+function buildQuestionDocument(text, audio, image, categoryId) {
+	const document = {
+		parentCaregory: categoryId
+	};
 	if (text) {
 		document["text"] = text;
 	}
