@@ -133,6 +133,28 @@ async function setUserConnected(userName, newSocketId) {
 	}
 }
 
+async function createNewUser(name, socketId) {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const usersCollection = database.collection("users");
+		const newDocument = {
+			name: name,
+			points: 0,
+			socketId: socketId,
+			connected: true
+		}
+		await usersCollection.insertOne(newDocument);
+	} catch (err) {
+		console.log(err);
+	} finally {
+		await client.close();
+	}
+}
+
 // New buzzer state should be buzzed, locked, or open.
 async function setBuzzerState(newBuzzerState) {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
@@ -170,5 +192,6 @@ module.exports = {
 	getAllUsers,
 	setUserDisconnected,
 	setUserConnected,
+	createNewUser,
 	setBuzzerState
 }
