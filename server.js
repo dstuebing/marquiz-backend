@@ -142,8 +142,18 @@ app.delete('/questions/:id', async (req, res) => {
 		await client.connect();
 		const database = client.db("MarQuiz-DB");
 
+		// delete question document
 		const questionsCollection = database.collection("questions");
-		await questionsCollection.deleteOne({ "_id": ObjectID(questionId) });
+		const deletedQuestion = await questionsCollection.findOneAndDelete({ "_id": ObjectID(questionId) });
+
+		// delete reference to deleted question in category
+		const parentCategoryId = deletedQuestion.value.parentCaregory;
+		const categoriesCollection = database.collection("categories");
+		await categoriesCollection.updateOne(
+			{ _id: ObjectID(parentCategoryId) },
+			{ $pull: { questions: questionId } }
+		);
+
 		res.sendStatus(200);
 	} catch (err) {
 		console.log(err);
