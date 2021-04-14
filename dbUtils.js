@@ -104,6 +104,35 @@ async function setUserDisconnected(socketId) {
 	}
 }
 
+async function setUserConnected(userName, newSocketId) {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const usersCollection = database.collection("users");
+
+		// create a filter for document to update
+		const filter = { "name": userName };
+		// this option instructs the method to NOT create a document if no documents match the filter
+		const options = { upsert: false };
+		// how the document should be updated
+		const updateDoc = {
+			$set: {
+				connected: true,
+				socketId: newSocketId
+			},
+		};
+
+		await usersCollection.updateOne(filter, updateDoc, options);
+	} catch (err) {
+		console.log(err);
+	} finally {
+		await client.close();
+	}
+}
+
 // New buzzer state should be buzzed, locked, or open.
 async function setBuzzerState(newBuzzerState) {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
@@ -140,5 +169,6 @@ module.exports = {
 	getConnectedUsers,
 	getAllUsers,
 	setUserDisconnected,
+	setUserConnected,
 	setBuzzerState
 }
