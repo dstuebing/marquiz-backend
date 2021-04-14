@@ -10,12 +10,16 @@ let io = require('socket.io')(http, {
 		methods: ["GET", "POST"]
 	}
 });
-var User = require('./User');
 
 const {
 	getQuestionById,
 	getGameState,
 	getConnectedUsers,
+	getAllUsers,
+	setUserDisconnected,
+	setUserConnected,
+	createNewUser,
+	updateUserPoints,
 	setBuzzerState
 } = require('./dbUtils');
 
@@ -323,10 +327,7 @@ http.listen(PORT, () => {
 	console.log('Listening on port *: ', PORT);
 });
 
-// TODO Transfer this data to DB 
-let users = [];
-let buzzerState = buzzer.OPEN;
-
+// Emits the current game state and the info for each connected user via the given socket.
 async function sendGameState(socket) {
 	const state = await getGameState();
 	socket.emit("game_state", state);
@@ -334,127 +335,135 @@ async function sendGameState(socket) {
 	const users = await getConnectedUsers();
 	users.forEach((user) => {
 		socket.emit("pointsChanged", user.name, user.points);
-	})
+	});
 }
 
+
+
+
+
+
+// ### SOCKET EVENTS ###
 io.on('connection', (socket) => {
 
 	// The event that a user leaves. The user may rejoin with a new socket id.
-	socket.on('disconnect', () => {
+	socket.on('disconnect', async () => {
+		// only connected users can disconnect
+		const users = await getConnectedUsers();
 		const userBySocketId = users.find(user => user.socketId === socket.id);
 		if (userBySocketId) {
-			// remove from user array
-			users = users.filter(user => user.socketId !== socket.id)
-
-			console.log("User disconnected: ", userBySocketId.name)
-
-			userBySocketId.connected = false;
-
-			// emitting the same event to everyone
+			// DB access
+			await setUserDisconnected(socket.id);
+			// console output and emitting the same event to everyone
 			const nameOfDisconnectedUser = userBySocketId.name;
+			console.log("User disconnected: ", nameOfDisconnectedUser);
 			io.emit('disconnected', nameOfDisconnectedUser);
 		}
 	});
 
+	// The event that someone requests the current game state.
 	socket.on('game_state', async () => {
 		await sendGameState(socket);
 	});
 
-
 	// The event that a user joins. Covered cases: a new user joins, an existing user rejoins, 
 	// a user tries to join with an already present name. 
 	socket.on('connected', async (name) => {
-
-		// Replay connected and pointsChanged events for each already connected user to sender only
+		// new player (sender) needs the current game state
 		await sendGameState(socket);
-
-		console.log("User connected: ", name)
+		// check if a user with the given name already exists
+		const users = await getAllUsers();
 		const existingUserWithSameName = users.find(user => user.name === name);
 		if (existingUserWithSameName) {
-
 			if (existingUserWithSameName.connected) {
 				// another user tries to join with the same name as a connected user
-				// TODO emit event that tells the sender to enter a different name
-
+				// emit event that tells the sender to enter a different name
+				socket.emit('nameAlreadyTaken', name);
 			} else {
 				// a user joins with the name of a disconnected user (i.e. he is rejoining)
-				existingUserWithSameName.connected = true;
 				// rejoining changed the socket id
-				existingUserWithSameName.socketId = socket.id;
-				// emitting the same event to everyone
+				await setUserConnected(name, socket.id);
+				// console output and emitting the same event to everyone
+				console.log("User connected: ", name);
 				io.emit('connected', name);
 			}
-
 		} else {
 			// not existing user with this name must be created and added
-			const user = new User(socket.id, name);
-			users.push(user);
-			// emitting the same event to everyone
+			await createNewUser(name, socket.id);
+			// console output and emitting the same event to everyone
+			console.log("User connected: ", name);
 			io.emit('connected', name);
 		}
 	});
 
-
 	// The event that a user presses the buzzer. Action only required if buzzer was open.
-	socket.on('buzz', () => {
-		if (buzzerState === buzzer.OPEN) {
-			buzzerState = buzzer.BUZZED;
-
-			// emitting the same event to everyone
+	socket.on('buzz', async () => {
+		const state = await getGameState();
+		if (state.buzzer === buzzer.OPEN) {
+			// only connected users can buzz
+			const users = await getConnectedUsers();
 			const buzzingUserBySocketId = users.find(user => user.socketId === socket.id);
 			if (buzzingUserBySocketId) {
+				await setBuzzerState(buzzer.BUZZED);
+				// console output and emitting the same event to everyone
 				const nameOfBuzzingUser = buzzingUserBySocketId.name;
+				console.log("User buzzed: ", nameOfBuzzingUser);
 				io.emit('buzz', nameOfBuzzingUser);
 			}
 		}
 	});
 
-
 	// The event that the buzzer is locked. 
-	socket.on('buzzLock', () => {
-		setBuzzerState(buzzer.LOCKED);
+	socket.on('buzzLock', async () => {
+		await setBuzzerState(buzzer.LOCKED);
+		// console output and emitting the same event to everyone
+		console.log("Buzzer was locked!");
 		io.emit('buzzLock');
 	});
 
-
 	// The event that the buzzer is set to open. Can be used to unlock the 
 	// locked buzzer or to reset the buzzer after buzzing.
-	socket.on('buzzOpen', () => {
-		setBuzzerState(buzzer.OPEN);
+	socket.on('buzzOpen', async () => {
+		await setBuzzerState(buzzer.OPEN);
+		// console output and emitting the same event to everyone
+		console.log("Buzzer is open!");
 		io.emit('buzzOpen');
 	});
-
 
 	// The event that the points were changed for a user.
 	// Parameters are the name of the user whose points should be 
 	// changed and the new amount of points.
-	socket.on('pointsChanged', (name, newPoints) => {
-		const userByName = users.find(user => user.name === name);
-		if (userByName) {
-			userByName.points = newPoints;
-			io.emit('pointsChanged', name, newPoints);
-		}
+	socket.on('pointsChanged', async (name, newPoints) => {
+		await updateUserPoints(name, newPoints);
+		// console output and emitting the same event to everyone
+		console.log("User points updated: ", name);
+		io.emit('pointsChanged', name, newPoints);
 	});
 
 	// Events for presenting question to players
 	socket.on('showText', async (questionId) => {
 		const question = await getQuestionById(questionId);
 		if (question && question.text) {
+			// console output and emitting the same event to everyone
+			console.log("Text of question now shown", questionId);
 			io.emit('showText', question.text);
 		}
 	});
 	socket.on('showImage', async (questionId) => {
 		const question = await getQuestionById(questionId);
 		if (question && question.image) {
+			// console output and emitting the same event to everyone
+			console.log("Image of question now shown", questionId);
 			io.emit('showImage', question.image);
 		}
 	});
 	socket.on('playAudio', async (questionId) => {
 		const question = await getQuestionById(questionId);
 		if (question && question.audio) {
+			// console output and emitting the same event to everyone
+			console.log("Audio of question now played", questionId);
 			io.emit('playAudio', question.audio);
 		}
 	});
-
 });
 
