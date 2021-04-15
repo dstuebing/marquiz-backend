@@ -22,6 +22,7 @@ const {
 	updateUserPoints,
 	updatePackName,
 	updateCategoryName,
+	updateQuestion,
 	setBuzzerState
 } = require('./dbUtils');
 
@@ -141,6 +142,7 @@ app.put('/packs/:id', async (req, res) => {
 	// there is nothing that could be updated
 	if (!newName) {
 		res.sendStatus(400);
+		return;
 	}
 
 	await updatePackName(packId, newName);
@@ -154,9 +156,26 @@ app.put('/categories/:id', async (req, res) => {
 	// there is nothing that could be updated
 	if (!newName) {
 		res.sendStatus(400);
+		return;
 	}
 
 	await updateCategoryName(packId, newName);
+	res.sendStatus(200);
+});
+
+app.put('/questions/:id', async (req, res) => {
+	const id = req.params.id;
+	const text = req.body.text;
+	const audio = req.body.audio;
+	const image = req.body.image;
+
+	// there is nothing that could be updated
+	if (!text && !audio && !image) {
+		res.sendStatus(400);
+		return;
+	}
+
+	await updateQuestion(id, text, audio, image);
 	res.sendStatus(200);
 });
 
