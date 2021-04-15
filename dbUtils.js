@@ -183,6 +183,34 @@ async function updateUserPoints(userName, newPointsCount) {
 	}
 }
 
+async function updatePackName(id, newName) {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const packsCollection = database.collection("packs");
+
+		// create a filter for document to update
+		const filter = { "_id": ObjectID(id) };
+		// this option instructs the method to NOT create a document if no documents match the filter
+		const options = { upsert: false };
+		// how the document should be updated
+		const updateDoc = {
+			$set: {
+				packName: newName
+			},
+		};
+
+		await packsCollection.updateOne(filter, updateDoc, options);
+	} catch (err) {
+		console.log(err);
+	} finally {
+		await client.close();
+	}
+}
+
 // New buzzer state should be buzzed, locked, or open.
 async function setBuzzerState(newBuzzerState) {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
@@ -222,5 +250,6 @@ module.exports = {
 	setUserConnected,
 	createNewUser,
 	updateUserPoints,
+	updatePackName,
 	setBuzzerState
 }

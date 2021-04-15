@@ -20,6 +20,7 @@ const {
 	setUserConnected,
 	createNewUser,
 	updateUserPoints,
+	updatePackName,
 	setBuzzerState
 } = require('./dbUtils');
 
@@ -130,6 +131,19 @@ app.get('/questions/:id', async (req, res) => {
 	} else {
 		res.sendStatus(400);
 	}
+});
+
+app.put('/packs/:id', async (req, res) => {
+	const packId = req.params.id;
+	const newName = req.body.name;
+
+	// there is nothing that could be updated
+	if (!newName) {
+		res.sendStatus(400);
+	}
+
+	await updatePackName(packId, newName);
+	res.sendStatus(200);
 });
 
 // Deletes the question identified by the given id. So far, does not delete the reference
