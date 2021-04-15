@@ -21,6 +21,7 @@ const {
 	createNewUser,
 	updateUserPoints,
 	updatePackName,
+	updateCategoryName,
 	setBuzzerState
 } = require('./dbUtils');
 
@@ -143,6 +144,19 @@ app.put('/packs/:id', async (req, res) => {
 	}
 
 	await updatePackName(packId, newName);
+	res.sendStatus(200);
+});
+
+app.put('/categories/:id', async (req, res) => {
+	const packId = req.params.id;
+	const newName = req.body.name;
+
+	// there is nothing that could be updated
+	if (!newName) {
+		res.sendStatus(400);
+	}
+
+	await updateCategoryName(packId, newName);
 	res.sendStatus(200);
 });
 

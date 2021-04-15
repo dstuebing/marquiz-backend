@@ -211,6 +211,34 @@ async function updatePackName(id, newName) {
 	}
 }
 
+async function updateCategoryName(id, newName) {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const categoriesCollection = database.collection("categories");
+
+		// create a filter for document to update
+		const filter = { "_id": ObjectID(id) };
+		// this option instructs the method to NOT create a document if no documents match the filter
+		const options = { upsert: false };
+		// how the document should be updated
+		const updateDoc = {
+			$set: {
+				categoryName: newName
+			},
+		};
+
+		await categoriesCollection.updateOne(filter, updateDoc, options);
+	} catch (err) {
+		console.log(err);
+	} finally {
+		await client.close();
+	}
+}
+
 // New buzzer state should be buzzed, locked, or open.
 async function setBuzzerState(newBuzzerState) {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
@@ -251,5 +279,6 @@ module.exports = {
 	createNewUser,
 	updateUserPoints,
 	updatePackName,
+	updateCategoryName,
 	setBuzzerState
 }
