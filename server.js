@@ -34,10 +34,12 @@ const buzzer = {
 	OPEN: "open",
 }
 app.use(cors());
-app.use(bodyParser.json());       // to support JSON-encoded bodies
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+app.use(bodyParser.json({limit: "50MB"}));       // to support JSON-encoded bodies
+app.use(bodyParser.urlencoded({   // to support URL-encoded bodies
+	limit: "50MB",  			  // to allow for large data transmission
 	extended: true
 }));
+app.use(bodyParser.text({ limit: "50MB" }));
 
 // TODO Endpoint only for testing, can be removed later
 app.get('/', (req, res) => {
@@ -135,7 +137,7 @@ app.get('/questions/:id', async (req, res) => {
 	}
 });
 
-app.put('/packs/:id', async (req, res) => {
+app.post('/packs/:id', async (req, res) => {
 	const packId = req.params.id;
 	const newName = req.body.name;
 
@@ -149,7 +151,7 @@ app.put('/packs/:id', async (req, res) => {
 	res.sendStatus(200);
 });
 
-app.put('/categories/:id', async (req, res) => {
+app.post('/categories/:id', async (req, res) => {
 	const packId = req.params.id;
 	const newName = req.body.name;
 
@@ -163,7 +165,7 @@ app.put('/categories/:id', async (req, res) => {
 	res.sendStatus(200);
 });
 
-app.put('/questions/:id', async (req, res) => {
+app.post('/questions/:id', async (req, res) => {
 	const id = req.params.id;
 	const text = req.body.text;
 	const audio = req.body.audio;
