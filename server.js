@@ -17,6 +17,7 @@ const {
 	getConnectedUsers,
 	getAllUsers,
 	setUserDisconnected,
+	setAllUsersDisconnected,
 	setUserConnected,
 	createNewUser,
 	updateUserPoints,
@@ -45,6 +46,11 @@ app.use(bodyParser.text({ limit: "50MB" }));
 app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/index.html')
 });
+
+async function onStart() {
+	await setAllUsersDisconnected();
+}
+onStart();
 
 // Endpoint for getting all quiz data.
 app.get('/quizes', async (req, res) => {

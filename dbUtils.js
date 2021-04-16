@@ -75,6 +75,33 @@ async function getAllUsers() {
 	}
 }
 
+async function setAllUsersDisconnected() {
+	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
+
+	try {
+		await client.connect();
+		const database = client.db("MarQuiz-DB");
+
+		const usersCollection = database.collection("users");
+
+		// this option instructs the method to NOT create a document if no documents match the filter
+		const options = { upsert: false };
+		// how the document should be updated
+		const updateDoc = {
+			$set: {
+				connected: false,
+				socketId: ""
+			},
+		};
+
+		await usersCollection.updateMany({}, updateDoc, options);
+	} catch (err) {
+		console.log(err);
+	} finally {
+		await client.close();
+	}
+}
+
 async function setUserDisconnected(socketId) {
 	const client = new MongoClient(dbConnectionString, { useUnifiedTopology: true });
 
@@ -311,6 +338,7 @@ module.exports = {
 	getConnectedUsers,
 	getAllUsers,
 	setUserDisconnected,
+	setAllUsersDisconnected,
 	setUserConnected,
 	createNewUser,
 	updateUserPoints,
