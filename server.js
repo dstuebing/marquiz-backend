@@ -453,14 +453,14 @@ io.on('connection', (socket) => {
 				await setUserConnected(name, socket.id);
 				// console output and emitting the same event to everyone
 				console.log("User connected: ", name);
-				io.emit('connected', name);
+				io.emit('pointsChanged', name, existingUserWithSameName.points)
 			}
 		} else {
 			// not existing user with this name must be created and added
 			await createNewUser(name, socket.id);
 			// console output and emitting the same event to everyone
 			console.log("User connected: ", name);
-			io.emit('connected', name);
+			io.emit('pointsChanged', name, 0);
 		}
 	});
 
