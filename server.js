@@ -525,6 +525,12 @@ io.on('connection', (socket) => {
 			io.emit('showImage', question.image);
 		}
 	});
+	socket.on('hideText', async () => {
+		io.emit('hideText');
+	});
+	socket.on('hideImage', async () => {
+		io.emit('hideImage');
+	});
 	socket.on('playAudio', async (questionId) => {
 		const question = await getQuestionById(questionId);
 		if (question && question.audio) {
