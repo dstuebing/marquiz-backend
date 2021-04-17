@@ -531,6 +531,9 @@ io.on('connection', (socket) => {
 	socket.on('hideImage', async () => {
 		io.emit('hideImage');
 	});
+	socket.on('pauseAudio', async () => {
+		io.emit('pauseAudio');
+	});
 	socket.on('playAudio', async (questionId) => {
 		const question = await getQuestionById(questionId);
 		if (question && question.audio) {
