@@ -1,5 +1,5 @@
 const { MongoClient, ObjectID } = require("mongodb");
-const dbConnectionString = "mongodb+srv://RWUser:8YSSSCTEO4Apnfsm@cluster0.p9g9p.mongodb.net/MarQuiz-DB?retryWrites=true&w=majority"
+const dbConnectionString = process.env.MONGODB_URI
 // There is only one gameState document. It has this id.
 const gameStateId = "6074963f3e99bec11178ad26";
 
